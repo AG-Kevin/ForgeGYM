@@ -9,7 +9,7 @@ VALUES (1, 1, 1, 1, TIMESTAMP '2099-01-01 10:00:00', TIMESTAMP '2099-01-01 11:00
 
 INSERT INTO sys_user (id, username, password_hash, role, ref_id) VALUES
     (1, 'admin', 'bf6b5bdb74c79ece9fc0ad0ac9fb0359f9555d4f35a83b2e6ec69ae99e09603d', 'ADMIN', NULL),
-    (2, 'coach1', '6b2569fba6f7d2bc463c664350e3ab9a12badd08d8a1e822e7e8cc56d28a79c2', 'COACH', 1),
+    (2, 'coach1', '667586fab17b3ffe6a1bcd798892c7af34e50bb63f2f648c2fea330f3dee76aa', 'COACH', 1),
     (3, 'member1', '2c3dac1086c1d0481c1b77f3778e3e2b8d16b28f769df518c08000bc56cc6d12', 'MEMBER', 1);
 
 INSERT INTO booking (id, schedule_id, member_id, status, created_at, amount, attendance_status, rating, review_content, reviewed_at)

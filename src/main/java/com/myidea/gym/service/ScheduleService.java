@@ -106,6 +106,28 @@ public class ScheduleService {
         courseScheduleMapper.deleteById(id);
     }
 
+    private void validateTimeSlot(LocalDateTime start, LocalDateTime end) {
+        int startHour = start.getHour();
+        int startMin = start.getMinute();
+        int endHour = end.getHour();
+        int endMin = end.getMinute();
+
+        // 规范时间段检查：
+        // 8-10, 10-12, 14-16, 16-18, 19-21
+        boolean valid = false;
+        if (startMin == 0 && endMin == 0) {
+            if (startHour == 8 && endHour == 10) valid = true;
+            else if (startHour == 10 && endHour == 12) valid = true;
+            else if (startHour == 14 && endHour == 16) valid = true;
+            else if (startHour == 16 && endHour == 18) valid = true;
+            else if (startHour == 19 && endHour == 21) valid = true;
+        }
+
+        if (!valid) {
+            throw new IllegalArgumentException("排课时间必须符合标准时段：08-10, 10-12, 14-16, 16-18, 19-21");
+        }
+    }
+
     private void validateSchedule(CourseSchedule schedule) {
         if (schedule.getCourseId() == null) {
             throw new IllegalArgumentException("课程不能为空");
@@ -131,6 +153,8 @@ public class ScheduleService {
         if (schedule.getStartTime() == null || schedule.getEndTime() == null || !schedule.getEndTime().isAfter(schedule.getStartTime())) {
             throw new IllegalArgumentException("开始/结束时间不合法");
         }
+        validateTimeSlot(schedule.getStartTime(), schedule.getEndTime());
+
         if (!schedule.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException("排课开始时间必须晚于当前时间");
         }

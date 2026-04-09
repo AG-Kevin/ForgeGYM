@@ -43,7 +43,6 @@ public class BookingService {
     private final MemberMapper memberMapper;
     private final StoreMapper storeMapper;
     private final CurrentUserService currentUserService;
-    private final BookingCapacityService bookingCapacityService;
     private final MembershipService membershipService;
 
     public List<BookingScheduleView> myBookings() {
@@ -71,94 +70,103 @@ public class BookingService {
  */
     @Transactional
     public Booking book(Long scheduleId) {
-    // 获取当前登录用户
+        // 获取当前登录用户
         SysUser user = currentUserService.getLoginUser();
-    // 检查用户角色是否为会员
+        // 检查用户角色是否为会员
         if (!"MEMBER".equals(user.getRole())) {
             throw new IllegalArgumentException("仅会员可预约");
         }
-    // 获取会员ID
+        // 获取会员ID
         Long memberId = user.getRefId();
         if (memberId == null) {
             throw new IllegalArgumentException("会员信息不完整");
         }
-    // 确保会员是激活状态
+        // 确保会员是激活状态
         membershipService.assertActiveMember(memberId);
 
-    // 根据排课ID查询排课信息
+        // 根据排课ID查询排课信息
         CourseSchedule schedule = courseScheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new IllegalArgumentException("排课不存在");
         }
-    // 根据课程ID查询课程信息
+        // 根据课程ID查询课程信息
         Course course = courseMapper.selectById(schedule.getCourseId());
         if (course == null) {
             throw new IllegalArgumentException("关联课程不存在");
         }
-    // 获取课程价格，如果为null则设为0
-        BigDecimal price = course.getPrice();
-        if (price == null) price = BigDecimal.ZERO;
+        // 获取课程价格
+        BigDecimal price = course.getPrice() != null ? course.getPrice() : BigDecimal.ZERO;
 
-    // 检查排课是否已开始
+        // 检查排课是否已开始
         if (schedule.getStartTime() != null && !schedule.getStartTime().isAfter(LocalDateTime.now())) {
             throw new IllegalArgumentException("排课已开始，无法预约");
         }
 
-        // Lock member and check balance
-        Member member = memberMapper.selectByIdForUpdate(memberId);
-        if (member == null) {
-            throw new IllegalArgumentException("会员不存在");
-        }
-        if (member.getBalance() == null || member.getBalance().compareTo(price) < 0) {
-            throw new IllegalArgumentException("账户余额不足，请先充值（课程费用: ￥" + price + "）");
-        }
-
-        List<Long> memberIds = resolveMemberIds(user);
-        Booking existing = bookingMapper.selectOne(new LambdaQueryWrapper<Booking>()
-                .eq(Booking::getScheduleId, scheduleId)
-                .in(Booking::getMemberId, memberIds)
-                .last("limit 1"));
-        if (existing != null && ("COMPLETED".equals(existing.getStatus()) || "BOOKED".equals(existing.getStatus()))) {
-            throw new IllegalArgumentException("不可重复预约");
-        }
-
-        long reserveRes = bookingCapacityService.reserve(scheduleId, memberId);
-        if (reserveRes == -1) {
-            throw new IllegalArgumentException("名额已满");
-        }
-        if (reserveRes == -2) {
-            throw new IllegalArgumentException("不可重复预约");
-        }
-        if (reserveRes == -3) {
-            throw new IllegalArgumentException("预约系统初始化中，请稍后重试");
-        }
-        if (reserveRes == -4) {
-            throw new IllegalArgumentException("预约繁忙，请稍后重试");
-        }
-
-        // Deduct balance
-        member.setBalance(member.getBalance().subtract(price));
-        memberMapper.updateById(member);
-
-        Booking booking = existing == null ? new Booking() : existing;
-        booking.setScheduleId(scheduleId);
-        booking.setMemberId(memberId);
-        booking.setStatus("COMPLETED");
-        booking.setCreatedAt(LocalDateTime.now());
-        booking.setAmount(price);
-        booking.setAttendanceStatus("SCHEDULED");
-        try {
-            if (existing == null) {
-                bookingMapper.insert(booking);
-            } else {
-                bookingMapper.updateById(booking);
+        // 使用 synchronized 确保并发安全，锁定特定的 scheduleId
+        synchronized (scheduleId.toString().intern()) {
+            // Lock member and check balance
+            Member member = memberMapper.selectByIdForUpdate(memberId);
+            if (member == null) {
+                throw new IllegalArgumentException("会员不存在");
             }
-        } catch (RuntimeException e) {
-            // Rollback capacity if DB insert/update fails
-            bookingCapacityService.release(scheduleId, memberId);
-            throw e;
+            if (member.getBalance() == null || member.getBalance().compareTo(price) < 0) {
+                throw new IllegalArgumentException("账户余额不足，请先充值（课程费用: ￥" + price + "）");
+            }
+
+            List<Long> memberIds = resolveMemberIds(user);
+            
+            // 1. 检查是否已预约过该课程
+            Booking existing = bookingMapper.selectOne(new LambdaQueryWrapper<Booking>()
+                    .eq(Booking::getScheduleId, scheduleId)
+                    .in(Booking::getMemberId, memberIds)
+                    .in(Booking::getStatus, List.of("COMPLETED", "BOOKED"))
+                    .last("limit 1"));
+            if (existing != null) {
+                throw new IllegalArgumentException("不可重复预约");
+            }
+
+            // 2. 检查是否有时间冲突的预约
+            List<Booking> memberActiveBookings = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
+                    .in(Booking::getMemberId, memberIds)
+                    .in(Booking::getStatus, List.of("COMPLETED", "BOOKED")));
+            for (Booking b : memberActiveBookings) {
+                CourseSchedule other = courseScheduleMapper.selectById(b.getScheduleId());
+                if (other != null && isOverlap(schedule, other)) {
+                    throw new IllegalArgumentException("该时间段您已有其他预约冲突");
+                }
+            }
+
+            // 3. 检查名额是否已满
+            Long bookedCount = bookingMapper.selectCount(new LambdaQueryWrapper<Booking>()
+                    .eq(Booking::getScheduleId, scheduleId)
+                    .in(Booking::getStatus, List.of("COMPLETED", "BOOKED")));
+            if (bookedCount >= schedule.getCapacity()) {
+                throw new IllegalArgumentException("名额已满");
+            }
+
+            // Deduct balance
+            member.setBalance(member.getBalance().subtract(price));
+            memberMapper.updateById(member);
+
+            Booking booking = new Booking();
+            booking.setScheduleId(scheduleId);
+            booking.setMemberId(memberId);
+            booking.setStatus("COMPLETED");
+            booking.setCreatedAt(LocalDateTime.now());
+            booking.setAmount(price);
+            booking.setAttendanceStatus("SCHEDULED");
+            bookingMapper.insert(booking);
+            return booking;
         }
-        return booking;
+    }
+
+    private boolean isOverlap(CourseSchedule s1, CourseSchedule s2) {
+        if (s1 == null || s2 == null || s1.getStartTime() == null || s1.getEndTime() == null 
+                || s2.getStartTime() == null || s2.getEndTime() == null) {
+            return false;
+        }
+        // 严格时间冲突判断：(A.Start < B.End) 且 (A.End > B.Start)
+        return s1.getStartTime().isBefore(s2.getEndTime()) && s1.getEndTime().isAfter(s2.getStartTime());
     }
 
     @Transactional
@@ -199,7 +207,6 @@ public class BookingService {
         booking.setStatus("LEAVE");
         booking.setAttendanceStatus("LEAVE");
         bookingMapper.updateById(booking);
-        bookingCapacityService.release(booking.getScheduleId(), booking.getMemberId());
     }
 
     public List<BookingMemberView> listBookingsForCoach(Long scheduleId) {
@@ -496,7 +503,7 @@ public class BookingService {
                 continue;
             }
             boolean changed = false;
-            if (!List.of("ATTENDED", "ABSENT", "LEAVE", "CANCELLED").contains(booking.getAttendanceStatus())) {
+            if (booking.getAttendanceStatus() == null || !List.of("ATTENDED", "ABSENT", "LEAVE", "CANCELLED").contains(booking.getAttendanceStatus())) {
                 booking.setAttendanceStatus("ATTENDED");
                 changed = true;
             }

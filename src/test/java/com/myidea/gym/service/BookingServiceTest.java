@@ -49,8 +49,6 @@ class BookingServiceTest {
     @Mock
     private CurrentUserService currentUserService;
     @Mock
-    private BookingCapacityService bookingCapacityService;
-    @Mock
     private MembershipService membershipService;
 
     @InjectMocks
@@ -77,8 +75,8 @@ class BookingServiceTest {
         schedule.setCourseId(31L);
         schedule.setCoachId(41L);
         schedule.setStoreId(51L);
-        schedule.setStartTime(LocalDateTime.of(2026, 3, 29, 10, 0));
-        schedule.setEndTime(LocalDateTime.of(2026, 3, 29, 11, 0));
+        schedule.setStartTime(LocalDateTime.now().plusDays(1));
+        schedule.setEndTime(LocalDateTime.now().plusDays(1).plusHours(1));
         when(courseScheduleMapper.selectById(21L)).thenReturn(schedule);
 
         Course course = new Course();
@@ -144,7 +142,6 @@ class BookingServiceTest {
         assertThat(booking.getStatus()).isEqualTo("LEAVE");
         verify(memberMapper).updateById(member);
         verify(bookingMapper).updateById(booking);
-        verify(bookingCapacityService).release(21L, 3L);
     }
 
     @Test
