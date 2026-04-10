@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -24,7 +26,8 @@ public class CourseController {
 
     @GetMapping(value = "/{id}/video", produces = "video/mp4")
     public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> getVideo(@org.springframework.web.bind.annotation.PathVariable("id") Long id) {
-        java.io.File file = new java.io.File("uploads/videos/" + id + ".mp4");
+        Path dir = Paths.get(System.getProperty("user.dir"), "uploads", "videos");
+        java.io.File file = dir.resolve(id + ".mp4").toFile();
         if (!file.exists()) {
             return org.springframework.http.ResponseEntity.notFound().build();
         }

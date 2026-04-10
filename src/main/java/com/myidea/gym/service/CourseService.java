@@ -92,14 +92,14 @@ public class CourseService {
             view.setLevel(course.getLevel());
             view.setCalories(course.getCalories());
             view.setCoverImage(course.getCoverImage());
-            
+
             java.io.File file = videoDir.resolve(course.getId() + ".mp4").toFile();
             if (file.exists()) {
                 view.setVideoUrl("http://localhost:8080/api/courses/" + course.getId() + "/video");
             } else {
                 view.setVideoUrl(null);
             }
-            
+
             view.setSummary(course.getSummary());
             view.setCoachNames(related.stream()
                     .map(item -> coachMap.get(item.getCoachId()))

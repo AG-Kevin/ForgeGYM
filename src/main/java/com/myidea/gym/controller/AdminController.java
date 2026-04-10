@@ -40,6 +40,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @RestController
@@ -65,6 +68,7 @@ public class AdminController {
 
     @GetMapping("/courses")
     public Result<List<AdminCourseView>> listCourses() {
+        Path videoDir = Paths.get(System.getProperty("user.dir"), "uploads", "videos");
         List<Course> courses = courseService.listAll();
         List<AdminCourseView> views = courses.stream().map(course -> {
             AdminCourseView v = new AdminCourseView();
@@ -82,8 +86,8 @@ public class AdminController {
             v.setSummary(course.getSummary());
             String fileName = course.getId() == null ? null : course.getId() + ".mp4";
             v.setVideoFileName(fileName);
-            File file = course.getId() == null ? null : new File("uploads/videos/" + fileName);
-            boolean exists = file != null && file.exists();
+            File file = fileName == null ? null : videoDir.resolve(fileName).toFile();
+            boolean exists = file != null && file.isFile();
             v.setHasVideo(exists);
             v.setVideoUrl(exists ? "http://localhost:8080/api/courses/" + course.getId() + "/video" : null);
             return v;
@@ -105,11 +109,9 @@ public class AdminController {
     @PostMapping("/courses/{id}/video")
     public Result<Void> uploadCourseVideo(@PathVariable("id") Long id, @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         try {
-            java.io.File dir = new java.io.File("uploads/videos");
-            if (!dir.exists()) {
-                dir.mkdirs();
-            }
-            java.io.File dest = new java.io.File(dir, id + ".mp4");
+            Path dir = Paths.get(System.getProperty("user.dir"), "uploads", "videos");
+            Files.createDirectories(dir);
+            Path dest = dir.resolve(id + ".mp4");
             file.transferTo(dest);
             return Result.ok();
         } catch (java.io.IOException e) {
@@ -280,7 +282,7 @@ public class AdminController {
             v.setPrimaryRole(roles.isEmpty() ? u.getRole() : roles.get(0));
             v.setRoles(roles);
             v.setRefId(u.getRefId());
-            
+
             // Set displayName based on role
             if ("COACH".equals(u.getRole()) && u.getRefId() != null) {
                 Coach coach = coachService.getById(u.getRefId());

@@ -16,6 +16,8 @@ import com.myidea.gym.model.entity.SysUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -187,9 +189,10 @@ public class ScheduleService {
         view.setCourseType(course == null ? null : course.getType());
         view.setPrice(course == null ? null : course.getPrice());
         view.setCourseSummary(course == null ? null : course.getSummary());
-        
+
         if (course != null) {
-            java.io.File file = new java.io.File("uploads/videos/" + course.getId() + ".mp4");
+            Path videoDir = Paths.get(System.getProperty("user.dir"), "uploads", "videos");
+            java.io.File file = videoDir.resolve(course.getId() + ".mp4").toFile();
             if (file.exists()) {
                 view.setCourseVideoUrl("http://localhost:8080/api/courses/" + course.getId() + "/video");
             } else {
@@ -198,7 +201,7 @@ public class ScheduleService {
         } else {
             view.setCourseVideoUrl(null);
         }
-        
+
         view.setCoachId(s.getCoachId());
         view.setCoachName(coach == null ? null : coach.getName());
         view.setStoreId(s.getStoreId());
