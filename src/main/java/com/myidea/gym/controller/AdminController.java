@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.myidea.gym.common.Result;
+import com.myidea.gym.model.dto.AdminCourseView;
 import com.myidea.gym.model.dto.AdminDashboardView;
 import com.myidea.gym.model.dto.BookingAttendanceRequest;
 import com.myidea.gym.model.dto.BookingMemberView;
@@ -38,6 +39,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
 import java.util.List;
 
 @RestController
@@ -62,8 +64,31 @@ public class AdminController {
     }
 
     @GetMapping("/courses")
-    public Result<List<Course>> listCourses() {
-        return Result.ok(courseService.listAll());
+    public Result<List<AdminCourseView>> listCourses() {
+        List<Course> courses = courseService.listAll();
+        List<AdminCourseView> views = courses.stream().map(course -> {
+            AdminCourseView v = new AdminCourseView();
+            v.setId(course.getId());
+            v.setName(course.getName());
+            v.setDescription(course.getDescription());
+            v.setDurationMinutes(course.getDurationMinutes());
+            v.setType(course.getType());
+            v.setPrice(course.getPrice());
+            v.setCategory(course.getCategory());
+            v.setLevel(course.getLevel());
+            v.setCalories(course.getCalories());
+            v.setCoverImage(course.getCoverImage());
+            v.setStatus(course.getStatus());
+            v.setSummary(course.getSummary());
+            String fileName = course.getId() == null ? null : course.getId() + ".mp4";
+            v.setVideoFileName(fileName);
+            File file = course.getId() == null ? null : new File("uploads/videos/" + fileName);
+            boolean exists = file != null && file.exists();
+            v.setHasVideo(exists);
+            v.setVideoUrl(exists ? "http://localhost:8080/api/courses/" + course.getId() + "/video" : null);
+            return v;
+        }).toList();
+        return Result.ok(views);
     }
 
     @PostMapping("/courses")
@@ -75,6 +100,21 @@ public class AdminController {
     public Result<Course> updateCourse(@PathVariable("id") Long id, @RequestBody Course course) {
         course.setId(id);
         return Result.ok(courseService.update(course));
+    }
+
+    @PostMapping("/courses/{id}/video")
+    public Result<Void> uploadCourseVideo(@PathVariable("id") Long id, @org.springframework.web.bind.annotation.RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            java.io.File dir = new java.io.File("uploads/videos");
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+            java.io.File dest = new java.io.File(dir, id + ".mp4");
+            file.transferTo(dest);
+            return Result.ok();
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("上传视频失败", e);
+        }
     }
 
     @DeleteMapping("/courses/{id}")

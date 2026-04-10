@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,7 @@ public class CourseService {
                 .stream()
                 .collect(Collectors.toMap(Store::getId, Function.identity(), (a, b) -> a));
 
+        Path videoDir = Paths.get(System.getProperty("user.dir"), "uploads", "videos");
         return courses.stream().map(course -> {
             List<CourseSchedule> related = scheduleMap.getOrDefault(course.getId(), List.of());
             CourseCatalogView view = new CourseCatalogView();
@@ -89,7 +92,14 @@ public class CourseService {
             view.setLevel(course.getLevel());
             view.setCalories(course.getCalories());
             view.setCoverImage(course.getCoverImage());
-            view.setVideoUrl(course.getVideoUrl());
+            
+            java.io.File file = videoDir.resolve(course.getId() + ".mp4").toFile();
+            if (file.exists()) {
+                view.setVideoUrl("http://localhost:8080/api/courses/" + course.getId() + "/video");
+            } else {
+                view.setVideoUrl(null);
+            }
+            
             view.setSummary(course.getSummary());
             view.setCoachNames(related.stream()
                     .map(item -> coachMap.get(item.getCoachId()))

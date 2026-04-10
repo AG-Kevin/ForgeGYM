@@ -1,24 +1,24 @@
-package com.myidea.gym.model.entity;
+package com.myidea.gym.model.dto;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
-@TableName("course")
-public class Course {
-    @TableId(type = IdType.AUTO)
+public class AdminCourseView {
     private Long id;
     private String name;
     private String description;
     private Integer durationMinutes;
     private String type;
-    private java.math.BigDecimal price;
+    private BigDecimal price;
     private String category;
     private String level;
     private Integer calories;
     private String coverImage;
     private String status;
     private String summary;
+    private Boolean hasVideo;
+    private String videoUrl;
+    private String videoFileName;
 }

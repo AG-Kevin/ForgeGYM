@@ -187,7 +187,18 @@ public class ScheduleService {
         view.setCourseType(course == null ? null : course.getType());
         view.setPrice(course == null ? null : course.getPrice());
         view.setCourseSummary(course == null ? null : course.getSummary());
-        view.setCourseVideoUrl(course == null ? null : course.getVideoUrl());
+        
+        if (course != null) {
+            java.io.File file = new java.io.File("uploads/videos/" + course.getId() + ".mp4");
+            if (file.exists()) {
+                view.setCourseVideoUrl("http://localhost:8080/api/courses/" + course.getId() + "/video");
+            } else {
+                view.setCourseVideoUrl(null);
+            }
+        } else {
+            view.setCourseVideoUrl(null);
+        }
+        
         view.setCoachId(s.getCoachId());
         view.setCoachName(coach == null ? null : coach.getName());
         view.setStoreId(s.getStoreId());

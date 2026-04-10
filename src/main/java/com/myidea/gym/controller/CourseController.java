@@ -21,4 +21,13 @@ public class CourseController {
     public Result<List<CourseCatalogView>> catalog() {
         return Result.ok(courseService.listCatalog());
     }
+
+    @GetMapping(value = "/{id}/video", produces = "video/mp4")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> getVideo(@org.springframework.web.bind.annotation.PathVariable("id") Long id) {
+        java.io.File file = new java.io.File("uploads/videos/" + id + ".mp4");
+        if (!file.exists()) {
+            return org.springframework.http.ResponseEntity.notFound().build();
+        }
+        return org.springframework.http.ResponseEntity.ok(new org.springframework.core.io.FileSystemResource(file));
+    }
 }
