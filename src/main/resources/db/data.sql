@@ -77,7 +77,7 @@ INSERT IGNORE INTO course (id, name, description, duration_minutes, type, price,
 VALUES 
 (6, '增肌进阶', '针对有基础的学员，突破力量瓶颈', 90, 'GROUP', 80.00, '力量训练', '进阶', 600, '/assets/images/course-pt.jpg', 'https://www.w3schools.com/html/mov_bbb.mp4', 'ACTIVE', '力量突破与维度提升'),
 (7, '皮拉提斯大器械', '1对1器械指导，深度拉伸与核心激活', 60, '1V1', 250.00, '身心平衡', '入门-进阶', 320, '/assets/images/course-yoga.jpg', 'https://www.w3schools.com/html/movie.mp4', 'ACTIVE', '器械辅助与核心重塑'),
-(8, '尊巴派对', '动感节奏，释放压力，快乐燃脂', 50, 'GROUP', 40.00, '燃脂塑形', '入门', 400, '/assets/images/course-box.jpg', 'https://www.w3schools.com/html/movie.mp4', 'ACTIVE', '舞蹈律动与热量消耗'),
+(8, '舞蹈', '动感节奏，释放压力，快乐燃脂', 50, 'GROUP', 40.00, '燃脂塑形', '入门', 400, '/assets/images/course-box.jpg', 'https://www.w3schools.com/html/movie.mp4', 'ACTIVE', '舞蹈律动与热量消耗'),
 (9, 'HIIT极限挑战', '高强度间歇训练，挑战体能极限', 45, 'GROUP', 60.00, '燃脂塑形', '挑战', 550, '/assets/images/course-slim.jpg', 'https://www.w3schools.com/html/mov_bbb.mp4', 'ACTIVE', '高强间歇与代谢提升');
 
 -- 增加更多排课 (ID 6-15)
