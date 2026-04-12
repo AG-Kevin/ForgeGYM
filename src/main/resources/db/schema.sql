@@ -59,7 +59,6 @@ CREATE TABLE course (
                         level VARCHAR(32) COMMENT '难度等级：初级、中级、高级',
                         calories INT COMMENT '消耗卡路里',
                         cover_image VARCHAR(255) COMMENT '课程封面图',
-                        video_url VARCHAR(255) COMMENT '课程介绍视频',
                         status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE' COMMENT '状态：ACTIVE-启用、INACTIVE-禁用',
                         summary VARCHAR(255) COMMENT '课程摘要'
 ) COMMENT='课程信息表';
